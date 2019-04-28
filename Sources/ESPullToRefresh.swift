@@ -196,11 +196,25 @@ public extension UIScrollView /* Date Manager */ {
 
 open class ESRefreshHeaderView: ESRefreshComponent {
     fileprivate var previousOffset: CGFloat = 0.0
-    fileprivate var scrollViewInsets: UIEdgeInsets = UIEdgeInsets.zero
     fileprivate var scrollViewBounces: Bool = true
 
     open var lastRefreshTimestamp: TimeInterval?
     open var refreshIdentifier: String?
+
+    private var additionalScrollViewTopInset: CGFloat = 0 {
+        didSet {
+            guard additionalScrollViewTopInset != oldValue else {
+                return
+            }
+
+            let dTop = additionalScrollViewTopInset - oldValue
+            scrollView?.contentInset.top += dTop
+        }
+    }
+
+    private var defaultScrollViewTopInset: CGFloat {
+        return (scrollView?.contentInset.top ?? 0) - additionalScrollViewTopInset
+    }
     
     public convenience init(frame: CGRect, handler: @escaping ESRefreshHandler) {
         self.init(frame: frame)
@@ -213,7 +227,7 @@ open class ESRefreshHeaderView: ESRefreshComponent {
         DispatchQueue.main.async {
             [weak self] in
             self?.scrollViewBounces = self?.scrollView?.bounces ?? true
-            self?.scrollViewInsets = self?.scrollView?.contentInset ?? UIEdgeInsets.zero
+//            self?.scrollViewInsets = self?.scrollView?.contentInset ?? UIEdgeInsets.zero
         }
     }
     
@@ -225,14 +239,14 @@ open class ESRefreshHeaderView: ESRefreshComponent {
         super.offsetChangeAction(object: object, change: change)
         
         guard self.isRefreshing == false && self.isAutoRefreshing == false else {
-            let top = scrollViewInsets.top
-            let offsetY = scrollView.contentOffset.y
-            let height = self.frame.size.height
-            var scrollingTop = (-offsetY > top) ? -offsetY : top
-            scrollingTop = (scrollingTop > height + top) ? (height + top) : scrollingTop
-            
-            scrollView.contentInset.top = scrollingTop
-            
+//            let top = defaultScrollViewTopInset
+//            let offsetY = scrollView.contentOffset.y
+//            let height = self.frame.size.height
+//            var scrollingTop = (-offsetY > top) ? -offsetY : top
+//            scrollingTop = (scrollingTop > height + top) ? (height + top) : scrollingTop
+
+//            additionalScrollViewTopInset = scrollingTop - top
+
             return
         }
         
@@ -240,12 +254,12 @@ open class ESRefreshHeaderView: ESRefreshComponent {
         var isRecordingProgress = false
         defer {
             if isRecordingProgress == true {
-                let percent = -(previousOffset + scrollViewInsets.top) / self.animator.trigger
+                let percent = -(scrollView.contentOffset.y + defaultScrollViewTopInset) / self.animator.trigger
                 self.animator.refresh(view: self, progressDidChange: percent)
             }
         }
         
-        let offsets = previousOffset + scrollViewInsets.top
+        let offsets = scrollView.contentOffset.y + defaultScrollViewTopInset
         if offsets < -self.animator.trigger {
             // Reached critical
             if isRefreshing == false && isAutoRefreshing == false {
@@ -291,16 +305,13 @@ open class ESRefreshHeaderView: ESRefreshComponent {
         
         // 缓存scrollview当前的contentInset, 并根据animator的executeIncremental属性计算刷新时所需要的contentInset，它将在接下来的动画中应用。
         // Tips: 这里将self.scrollViewInsets.top更新，也可以将scrollViewInsets整个更新，因为left、right、bottom属性都没有用到，如果接下来的迭代需要使用这三个属性的话，这里可能需要额外的处理。
-        var insets = scrollView.contentInset
-        self.scrollViewInsets.top = insets.top
-        insets.top += animator.executeIncremental
+        additionalScrollViewTopInset = animator.executeIncremental
         
         // We need to restore previous offset because we will animate scroll view insets and regular scroll view animating is not applied then.
-        scrollView.contentInset = insets
         scrollView.contentOffset.y = previousOffset
         previousOffset -= animator.executeIncremental
         UIView.animate(withDuration: 0.2, delay: 0.0, options: .curveLinear, animations: {
-            scrollView.contentOffset.y = -insets.top
+            scrollView.contentOffset.y = -scrollView.contentInset.top
         }, completion: { (finished) in
             self.handler?()
             // un-ignore observer
@@ -321,17 +332,24 @@ open class ESRefreshHeaderView: ESRefreshComponent {
         self.animator.refreshAnimationEnd(view: self)
         
         // Back state
-        scrollView.contentInset.top = self.scrollViewInsets.top
-        scrollView.contentOffset.y =  self.scrollViewInsets.top + self.previousOffset
+        let contentOffsetY = scrollView.contentOffset.y
+        additionalScrollViewTopInset = 0
+        let newContentOffsetY = scrollView.contentOffset.y
+
+        if newContentOffsetY != contentOffsetY {
+            scrollView.contentOffset.y = contentOffsetY
+        }
+
         UIView.animate(withDuration: 0.2, delay: 0, options: .curveLinear, animations: {
-            scrollView.contentOffset.y = -self.scrollViewInsets.top
-            }, completion: { (finished) in
-                self.animator.refresh(view: self, stateDidChange: .pullToRefresh)
-                super.stop()
-                scrollView.contentInset.top = self.scrollViewInsets.top
-                self.previousOffset = scrollView.contentOffset.y
-                // un-ignore observer
-                self.ignoreObserver(false)
+            if newContentOffsetY != contentOffsetY {
+                scrollView.contentOffset.y = newContentOffsetY
+            }
+        }, completion: { (finished) in
+            self.animator.refresh(view: self, stateDidChange: .pullToRefresh)
+            super.stop()
+            self.previousOffset = scrollView.contentOffset.y
+            // un-ignore observer
+            self.ignoreObserver(false)
         })
     }
     
