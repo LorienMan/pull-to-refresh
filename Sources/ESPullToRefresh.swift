@@ -286,11 +286,16 @@ open class ESRefreshHeaderView: ESRefreshComponent {
         previousOffset = scrollView.contentOffset.y
         
     }
+
+    private var pullToRefreshOperation: Int = 0
     
     open override func start() {
         guard let scrollView = scrollView else {
             return
         }
+
+        pullToRefreshOperation += 1
+        let localPullToRefreshOperation = pullToRefreshOperation
         
         // ignore observer
         self.ignoreObserver(true)
@@ -310,9 +315,13 @@ open class ESRefreshHeaderView: ESRefreshComponent {
         // We need to restore previous offset because we will animate scroll view insets and regular scroll view animating is not applied then.
         scrollView.contentOffset.y = previousOffset
         previousOffset -= animator.executeIncremental
-        UIView.animate(withDuration: 0.2, delay: 0.0, options: .curveLinear, animations: {
+        UIView.animate(withDuration: 0.2, delay: 0.0, options: [.curveLinear, .beginFromCurrentState], animations: {
             scrollView.contentOffset.y = -scrollView.contentInset.top
         }, completion: { (finished) in
+            guard localPullToRefreshOperation == self.pullToRefreshOperation && finished else {
+                return
+            }
+
             self.handler?()
             // un-ignore observer
             self.ignoreObserver(false)
@@ -325,6 +334,9 @@ open class ESRefreshHeaderView: ESRefreshComponent {
         guard let scrollView = scrollView else {
             return
         }
+
+        pullToRefreshOperation += 1
+        let localPullToRefreshOperation = pullToRefreshOperation
         
         // ignore observer
         self.ignoreObserver(true)
@@ -340,11 +352,15 @@ open class ESRefreshHeaderView: ESRefreshComponent {
             scrollView.contentOffset.y = contentOffsetY
         }
 
-        UIView.animate(withDuration: 0.2, delay: 0, options: .curveLinear, animations: {
+        UIView.animate(withDuration: 0.2, delay: 0, options: [.curveLinear, .beginFromCurrentState], animations: {
             if newContentOffsetY != contentOffsetY {
                 scrollView.contentOffset.y = newContentOffsetY
             }
         }, completion: { (finished) in
+            guard localPullToRefreshOperation == self.pullToRefreshOperation && finished else {
+                return
+            }
+
             self.animator.refresh(view: self, stateDidChange: .pullToRefresh)
             super.stop()
             self.previousOffset = scrollView.contentOffset.y
