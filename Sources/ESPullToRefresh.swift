@@ -299,10 +299,7 @@ open class ESRefreshHeaderView: ESRefreshComponent {
         
         // ignore observer
         self.ignoreObserver(true)
-        
-        // stop scroll view bounces for animation
-        scrollView.bounces = false
-        
+
         // call super start
         super.start()
         
@@ -315,7 +312,7 @@ open class ESRefreshHeaderView: ESRefreshComponent {
         // We need to restore previous offset because we will animate scroll view insets and regular scroll view animating is not applied then.
         scrollView.contentOffset.y = previousOffset
         previousOffset -= animator.executeIncremental
-        UIView.animate(withDuration: 0.2, delay: 0.0, options: [.curveLinear, .beginFromCurrentState], animations: {
+        UIView.animate(withDuration: 0.2, delay: 0.0, options: [.curveLinear, .beginFromCurrentState, .allowUserInteraction], animations: {
             scrollView.contentOffset.y = -scrollView.contentInset.top
         }, completion: { (finished) in
             guard localPullToRefreshOperation == self.pullToRefreshOperation && finished else {
@@ -325,7 +322,6 @@ open class ESRefreshHeaderView: ESRefreshComponent {
             self.handler?()
             // un-ignore observer
             self.ignoreObserver(false)
-            scrollView.bounces = self.scrollViewBounces
         })
         
     }
@@ -352,7 +348,7 @@ open class ESRefreshHeaderView: ESRefreshComponent {
             scrollView.contentOffset.y = contentOffsetY
         }
 
-        UIView.animate(withDuration: 0.2, delay: 0, options: [.curveLinear, .beginFromCurrentState], animations: {
+        UIView.animate(withDuration: 0.2, delay: 0, options: [.curveLinear, .beginFromCurrentState, .allowUserInteraction], animations: {
             if newContentOffsetY != contentOffsetY {
                 scrollView.contentOffset.y = newContentOffsetY
             }
