@@ -315,13 +315,13 @@ open class ESRefreshHeaderView: ESRefreshComponent {
         UIView.animate(withDuration: 0.2, delay: 0.0, options: [.curveLinear, .beginFromCurrentState, .allowUserInteraction], animations: {
             scrollView.contentOffset.y = -scrollView.contentInset.top
         }, completion: { (finished) in
-            guard localPullToRefreshOperation == self.pullToRefreshOperation && finished else {
+            guard localPullToRefreshOperation == self.pullToRefreshOperation else {
                 return
             }
 
-            self.handler?()
             // un-ignore observer
             self.ignoreObserver(false)
+            self.handler?()
         })
         
     }
@@ -353,15 +353,15 @@ open class ESRefreshHeaderView: ESRefreshComponent {
                 scrollView.contentOffset.y = newContentOffsetY
             }
         }, completion: { (finished) in
-            guard localPullToRefreshOperation == self.pullToRefreshOperation && finished else {
+            guard localPullToRefreshOperation == self.pullToRefreshOperation else {
                 return
             }
 
+            // un-ignore observer
+            self.ignoreObserver(false)
             self.animator.refresh(view: self, stateDidChange: .pullToRefresh)
             super.stop()
             self.previousOffset = scrollView.contentOffset.y
-            // un-ignore observer
-            self.ignoreObserver(false)
         })
     }
     
