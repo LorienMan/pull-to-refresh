@@ -44,6 +44,7 @@ open class ESRefreshHeaderAnimator: UIView, ESRefreshProtocol, ESRefreshAnimator
     open var trigger: CGFloat = 60.0
     open var executeIncremental: CGFloat = 60.0
     open var state: ESRefreshViewState = .pullToRefresh
+    open var showImage: Bool = true
 
     fileprivate let imageView: UIImageView = {
         let imageView = UIImageView.init()
@@ -94,7 +95,7 @@ open class ESRefreshHeaderAnimator: UIView, ESRefreshProtocol, ESRefreshAnimator
     open func refreshAnimationEnd(view: ESRefreshComponent) {
         indicatorView.stopAnimating()
         indicatorView.isHidden = true
-        imageView.isHidden = false
+        imageView.isHidden = false || !showImage
         titleLabel.text = pullToRefreshDescription
         imageView.transform = CGAffineTransform.identity
     }
